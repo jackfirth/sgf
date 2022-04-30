@@ -1,6 +1,28 @@
 #lang racket/base
 
 
+(provide
+ #%app
+ #%datum
+ #%module-begin
+ #%top
+ #%top-interaction
+ sgf-game-tree
+ sgf-node
+ sgf-property
+ sgf-property-identifier
+ (rename-out [vector-immutable sgf-node-list]
+             [vector-immutable sgf-variation-list]
+             [vector-immutable sgf-property-list]
+             [vector-immutable sgf-property-value-list]))
+
+
+(require syntax/parse/define)
+
+
+;@----------------------------------------------------------------------------------------------------
+
+
 (module reader racket/base
 
   (provide read-syntax)
@@ -10,16 +32,17 @@
            syntax/parse)
 
   (define (read-syntax source port)
-    (syntax-parse (parse source (λ () (sgf-lexer port)))
+    (define stx (parse source (λ () (sgf-lexer port))))
+    (syntax-parse stx
       #:datum-literals (collection)
-      [(collection body ...) #'(module anonymous sgf body ...)])))
+      [(collection . body)
+       (datum->syntax #false (list* 'module 'anonymous 'sgf #'body) stx stx)])))
 
 
-(provide (rename-out [sgf-notation-module-begin #%module-begin]))
+(define-syntax-parse-rule (sgf-property-identifier id:id)
+  'id)
 
 
-(require syntax/parse/define)
-
-
-(define-syntax-parse-rule (sgf-notation-module-begin body ...)
-  (#%module-begin 'body ...))
+(struct sgf-game-tree (nodes variations) #:transparent #:property prop:custom-print-quotable 'never)
+(struct sgf-node (properties) #:transparent #:property prop:custom-print-quotable 'never)
+(struct sgf-property (name values) #:transparent #:property prop:custom-print-quotable 'never)
